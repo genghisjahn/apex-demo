@@ -1,6 +1,6 @@
 
 var child = require('child_process')
-var byline = require('./actordemo_addition')
+var byline = require('./addition')
 
 /**
  * Context for the request.
