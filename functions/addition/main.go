@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/apex/go-apex"
@@ -22,21 +23,41 @@ func main() {
 		//info.Println("PlayerID: ", eType.Params.Querystring["id"])
 		//info.Println("Headers:", eType.Params.Header["header1"], eType.Params.Header["header2"])
 		info.Println("Path:", rEvent.Params.Path["pid2"])
-		//info.Println("Stage:", eType.Stage_variables["dbserver"])
+		var n1 int
+		var n2 int
+
+		var nErr error
+		for k, v := range rEvent.Params.Path {
+			info.Printf("Path: %s %s\n", k, v)
+			if k == "num1" {
+				n1, nErr = strconv.Atoi(v)
+				if nErr != nil {
+					s.Message = fmt.Sprintf("%v", err)
+					return s, nErr
+				}
+			}
+			if k == "num2" {
+				n2, nErr = strconv.Atoi(v)
+				if nErr != nil {
+					s.Message = fmt.Sprintf("%v", err)
+					return s, nErr
+				}
+			}
+		}
 		if err != nil {
 			s.Message = fmt.Sprintf("%v", err)
-		} else {
-			s.Message = fmt.Sprintf("Event: %s ", data)
 		}
+		s.Numbers = append(s.Numbers, n1, n2)
+		s.Sum = n1 + n2
 		return s, nil
 	})
 }
 
 //Solution contains info about the solved addition problem
 type Solution struct {
-	Numbers []int
-	Sum     int
-	Message string
+	Numbers []int  `json:"numbers"`
+	Sum     int    `json:"sum"`
+	Message string `json:"message,omitempty"`
 }
 
 type Event struct {
