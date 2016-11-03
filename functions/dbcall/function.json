@@ -1,0 +1,15 @@
+{
+  "name": "dbcall",
+  "description": "Simple call from a database, gets movie stuff based on route and id",
+  "memory": 128,
+  "timeout": 60,
+  "role": "arn:aws:iam::256191299462:role/actordemo_lambda_function",
+  "vpc": {
+    "securityGroups": [
+      "sg-f1bb6296"
+    ],
+    "subnets": [
+      "subnet-a6534d9c","subnet-cbd2fcbc"
+    ]
+  }
+}
