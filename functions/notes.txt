@@ -2,7 +2,7 @@ Here are the gotchas:
 
 You have to get the function.json to
 put in the correct VPC stuff, or you have to reset it in aws console
-every time you update.  Haven't been able to get this to work yet.
+every time you update.  Got it working, YES!
 
 Everytime you make a change to the api gateway,
 you have to redeploy
