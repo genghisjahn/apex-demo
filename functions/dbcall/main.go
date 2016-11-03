@@ -2,13 +2,19 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
 
+	"database/sql"
+
 	"github.com/apex/go-apex"
+	_ "github.com/go-sql-driver/mysql"
 )
+
+var db DBInfo
 
 func main() {
 	apex.HandleFunc(func(event json.RawMessage, ctx *apex.Context) (interface{}, error) {
@@ -24,6 +30,11 @@ func main() {
 		json.Unmarshal([]byte(jdata), &rEvent)
 		info.Println("movieID: ", rEvent.Params.Querystring["id"])
 		info.Println("Path:", rEvent.Params.Path["type"])
+		db.Location = rEvent.StageVars["dblocation"]
+		db.DBName = rEvent.StageVars["dbname"]
+		db.Username = rEvent.StageVars["dbuser"]
+		db.Password = rEvent.StageVars["dbpassword"]
+		info.Println("Stage Vars:", rEvent.StageVars)
 		m.Name = "My Movie"
 		m.Year = 2016
 		c := Character{}
@@ -34,6 +45,24 @@ func main() {
 		m.Characters = append(m.Characters, c)
 		return m, nil
 	})
+}
+
+func getMovieData(id int) error {
+	constr := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s", db.Username, db.Password, db.Location, db.DBName)
+	db, err := sql.Open("mysql",
+		constr)
+	defer db.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type DBInfo struct {
+	Location string
+	DBName   string
+	Username string
+	Password string
 }
 
 type Movie struct {
@@ -80,5 +109,5 @@ type Event struct {
 		Path        map[string]string `json:"path"`
 		Querystring map[string]string `json:"querystring"`
 	} `json:"params"`
-	Stage_variables map[string]string `json:"stage-variables"`
+	StageVars map[string]string `json:"stage-variables"`
 }
