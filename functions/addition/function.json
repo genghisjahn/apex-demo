@@ -1,0 +1,7 @@
+{
+  "name": "addition",
+  "description": "Simple addition of an array of integers",
+  "memory": 128,
+  "timeout": 5,
+  "role": "arn:aws:iam::256191299462:role/actordemo_lambda_function"
+}

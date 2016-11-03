@@ -1,0 +1,8 @@
+{
+  "name": "actordemo",
+  "description": "Demonstration for how to use apex with aws lambda , api gateway and VPC resources.",
+  "memory": 128,
+  "timeout": 5,
+  "role": "arn:aws:iam::256191299462:role/actordemo_lambda_function",
+  "environment": {}
+}
