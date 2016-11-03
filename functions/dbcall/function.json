@@ -1,0 +1,7 @@
+{
+  "name": "dbcall",
+  "description": "Simple call from a database, gets movie stuff based on route and id",
+  "memory": 128,
+  "timeout": 5,
+  "role": "arn:aws:iam::256191299462:role/actordemo_lambda_function"
+}
