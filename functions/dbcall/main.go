@@ -40,20 +40,10 @@ func main() {
 		if id, idErr = strconv.Atoi(rawid); idErr != nil {
 			return nil, idErr
 		}
-		info.Println("StageVars:", rEvent.StageVars)
 		dbinfo.Location = rEvent.StageVars["dblocation"]
 		dbinfo.DBName = rEvent.StageVars["dbname"]
 		dbinfo.Username = rEvent.StageVars["dbuser"]
 		dbinfo.Password = rEvent.StageVars["dbpassword"]
-		info.Println("DBINFO:", dbinfo)
-		m.Title = "My Movie"
-		m.Year = 2016
-		c := Character{}
-		c.Name = "Joe Bob"
-		c.ActorInfo.DOB = time.Date(1973, time.June, 10, 0, 0, 0, 0, time.UTC)
-		c.ActorInfo.LastName = "Wear"
-		c.ActorInfo.FirstName = "Jon"
-		m.Characters = append(m.Characters, c)
 		if datatype == "movie" {
 			var dbErr error
 			m, dbErr = getMovieData(id, dbinfo)
@@ -68,7 +58,6 @@ func main() {
 
 func getMovieData(id int, dbinfo DBInfo) (Movie, error) {
 	constr := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s", dbinfo.Username, dbinfo.Password, dbinfo.Location, dbinfo.DBName)
-	info.Println("CON STRING:", constr)
 	m := Movie{}
 	db, err := sql.Open("mysql",
 		constr)
