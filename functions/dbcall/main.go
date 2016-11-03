@@ -99,7 +99,7 @@ func getMovieData(id int, dbinfo DBInfo) (Movie, error) {
 		m.Year = year
 		c := Character{}
 		c.Name = character
-		c.ActorInfo = Actor{LastName: lastname, FirstName: firstname}
+		c.ActorInfo = Actor{ID: actorid, LastName: lastname, FirstName: firstname}
 		m.Characters = append(m.Characters, c)
 	}
 	return m, nil
@@ -124,6 +124,7 @@ type Character struct {
 }
 
 type Actor struct {
+	ID        int       `json:"actor_id"`
 	LastName  string    `json:"last_name"`
 	FirstName string    `json:"first_name"`
 	DOB       time.Time `json:"dob,omitempty"`
