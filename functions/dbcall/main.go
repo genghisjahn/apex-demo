@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"database/sql"
 
@@ -184,10 +183,10 @@ type Character struct {
 }
 
 type Actor struct {
-	ID        int       `json:"actor_id"`
-	LastName  string    `json:"last_name"`
-	FirstName string    `json:"first_name"`
-	DOB       time.Time `json:"dob,omitempty"`
+	ID        int    `json:"actor_id"`
+	LastName  string `json:"last_name"`
+	FirstName string `json:"first_name"`
+	DOB       string `json:"dob,omitempty"`
 }
 
 type Event struct {
