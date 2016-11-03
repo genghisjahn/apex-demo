@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,28 +15,38 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var db DBInfo
+var info *log.Logger
 
 func main() {
 	apex.HandleFunc(func(event json.RawMessage, ctx *apex.Context) (interface{}, error) {
 		var rEvent Event
+		var dbinfo DBInfo
 		var m Movie
+		var id int
+		var idErr error
 		xborbits := log.Ldate | log.Ltime | log.Lshortfile
-		info := log.New(os.Stderr, "dbLog", xborbits)
+		info = log.New(os.Stderr, "dbLog", xborbits)
 		data, err := event.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
 		jdata := strings.Replace(string(data), `\"`, `"`, -1)
 		json.Unmarshal([]byte(jdata), &rEvent)
-		info.Println("movieID: ", rEvent.Params.Querystring["id"])
-		info.Println("Path:", rEvent.Params.Path["type"])
-		db.Location = rEvent.StageVars["dblocation"]
-		db.DBName = rEvent.StageVars["dbname"]
-		db.Username = rEvent.StageVars["dbuser"]
-		db.Password = rEvent.StageVars["dbpassword"]
-		info.Println("Stage Vars:", rEvent.StageVars)
-		m.Name = "My Movie"
+		datatype := rEvent.Params.Path["type"]
+		if !(datatype == "movie" || datatype == "actor") {
+			return nil, fmt.Errorf("Invalid Type %s", datatype)
+		}
+		rawid := rEvent.Params.Querystring["id"]
+		if id, idErr = strconv.Atoi(rawid); idErr != nil {
+			return nil, idErr
+		}
+		info.Println("StageVars:", rEvent.StageVars)
+		dbinfo.Location = rEvent.StageVars["dblocation"]
+		dbinfo.DBName = rEvent.StageVars["dbname"]
+		dbinfo.Username = rEvent.StageVars["dbuser"]
+		dbinfo.Password = rEvent.StageVars["dbpassword"]
+		info.Println("DBINFO:", dbinfo)
+		m.Title = "My Movie"
 		m.Year = 2016
 		c := Character{}
 		c.Name = "Joe Bob"
@@ -43,19 +54,55 @@ func main() {
 		c.ActorInfo.LastName = "Wear"
 		c.ActorInfo.FirstName = "Jon"
 		m.Characters = append(m.Characters, c)
+		if datatype == "movie" {
+			var dbErr error
+			m, dbErr = getMovieData(id, dbinfo)
+			if dbErr != nil {
+				info.Println("Error:", dbErr)
+				return nil, dbErr
+			}
+		}
 		return m, nil
 	})
 }
 
-func getMovieData(id int) error {
-	constr := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s", db.Username, db.Password, db.Location, db.DBName)
+func getMovieData(id int, dbinfo DBInfo) (Movie, error) {
+	constr := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s", dbinfo.Username, dbinfo.Password, dbinfo.Location, dbinfo.DBName)
+	info.Println("CON STRING:", constr)
+	m := Movie{}
 	db, err := sql.Open("mysql",
 		constr)
 	defer db.Close()
 	if err != nil {
-		return err
+		info.Println("ERROR Open:", err)
+		return m, err
 	}
-	return nil
+	rows, errRow := db.Query("select m.*,c.name as `character`,a.id as actorid,a.lastname,a.firstname from movie m,`character` c,actor a  where c.movieid=m.id and c.actorid=a.id and m.id = ?", id)
+	if errRow != nil {
+		info.Println("ERROR Row:", errRow)
+
+		return m, errRow
+	}
+	for rows.Next() {
+		var mid int
+		var title string
+		var year int
+		var character string
+		var actorid int
+		var lastname string
+		var firstname string
+		if errScan := rows.Scan(&mid, &title, &year, &character, &actorid, &lastname, &firstname); errScan != nil {
+			info.Println("ERROR Scan:", errScan)
+			return m, errScan
+		}
+		m.Title = title
+		m.Year = year
+		c := Character{}
+		c.Name = character
+		c.ActorInfo = Actor{LastName: lastname, FirstName: firstname}
+		m.Characters = append(m.Characters, c)
+	}
+	return m, nil
 }
 
 type DBInfo struct {
@@ -66,7 +113,7 @@ type DBInfo struct {
 }
 
 type Movie struct {
-	Name       string      `json:"name"`
+	Title      string      `json:"title"`
 	Year       int         `json:"year"`
 	Characters []Character `json:"characters"`
 }
@@ -79,7 +126,7 @@ type Character struct {
 type Actor struct {
 	LastName  string    `json:"last_name"`
 	FirstName string    `json:"first_name"`
-	DOB       time.Time `json:"dob"`
+	DOB       time.Time `json:"dob,omitempty"`
 }
 
 type Event struct {
