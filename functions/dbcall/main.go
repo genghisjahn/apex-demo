@@ -61,7 +61,7 @@ func main() {
 			if redisError != nil {
 				info.Println("Redis Error:", redisError)
 			}
-			if m.Title != "" {
+			if m.ID == 0 {
 				return m, nil
 			}
 			m, dbErr = getMovieData(id, dbinfo)
