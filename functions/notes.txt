@@ -32,3 +32,8 @@ this is confusing because at the top level you can just call the method itself, 
 
 The role that is created when you run the apex deploy will have to have VPC access
 You'll have to learn some about IAM and security groups.
+
+Keep things warm with a schedule trigger
+
+You have to allow incoming traffic from your security groups
+for the ports for mysql and redis
