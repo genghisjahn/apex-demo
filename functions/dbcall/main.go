@@ -30,16 +30,12 @@ func main() {
 		var idErr error
 		xborbits := log.Ldate | log.Ltime | log.Lshortfile
 		info = log.New(os.Stderr, "dbLog", xborbits)
-		info.Println("Start...MarshalJSON")
 		data, err := event.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
-		info.Println("End...MarshalJSON")
-		info.Println("Start...Unmarshal")
 		jdata := strings.Replace(string(data), `\"`, `"`, -1)
 		json.Unmarshal([]byte(jdata), &rEvent)
-		info.Println("End...Unmarshal")
 		datatype := rEvent.Params.Path["type"]
 		if !(datatype == "movie" || datatype == "actor") {
 			return nil, fmt.Errorf("Invalid Type %s", datatype)
@@ -56,7 +52,6 @@ func main() {
 		if datatype == "movie" {
 			var dbErr error
 			var redisError error
-			info.Println("Start DB Call Movie")
 			m, redisError = getMovieRedis(id)
 			if redisError != nil {
 				info.Println("Redis Error:", redisError)
@@ -75,7 +70,6 @@ func main() {
 			}
 			info.Println("End DB Call Movie")
 		}
-		info.Println("End")
 		return m, nil
 	})
 }
