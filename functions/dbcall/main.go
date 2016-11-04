@@ -68,7 +68,6 @@ func main() {
 			if saveErr != nil {
 				info.Println("Error Redis:", saveErr)
 			}
-			info.Println("End DB Call Movie")
 		}
 		return m, nil
 	})
