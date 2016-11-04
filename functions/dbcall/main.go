@@ -30,6 +30,7 @@ func main() {
 		info = log.New(os.Stderr, "dbLog", xborbits)
 		rEvent, err = getEvent(event)
 		if err != nil {
+			info.Println(err)
 			return nil, err
 		}
 
@@ -110,7 +111,6 @@ func getMovieRedis(id int, redisendpoint string) (Movie, error) {
 	var m Movie
 	c, err := redis.Dial("tcp", fmt.Sprintf("%s:6379", redisendpoint))
 	if err != nil {
-		info.Println("Redis Dial Error:", err, fmt.Sprintf("%s:6379", redisendpoint))
 		return m, err
 	}
 	defer c.Close()
@@ -132,7 +132,6 @@ func getMovieRedis(id int, redisendpoint string) (Movie, error) {
 func saveMovieToRedis(m Movie, redisendpoint string) error {
 	c, err := redis.Dial("tcp", fmt.Sprintf("%s:6379", redisendpoint))
 	if err != nil {
-		info.Println("Redis Dial Error:", err, fmt.Sprintf("%s:6379", redisendpoint))
 		return err
 	}
 	defer c.Close()
@@ -154,13 +153,10 @@ func getMovieDB(id int, dbinfo DBInfo) (Movie, error) {
 		constr)
 	defer db.Close()
 	if err != nil {
-		info.Println("ERROR Open:", err)
 		return m, err
 	}
 	rows, errRow := db.Query("select m.*,c.name as `character`,a.id as actorid,a.lastname,a.firstname from movie m,`character` c,actor a  where c.movieid=m.id and c.actorid=a.id and m.id = ?", id)
 	if errRow != nil {
-		info.Println("ERROR Row:", errRow)
-
 		return m, errRow
 	}
 	for rows.Next() {
@@ -172,7 +168,6 @@ func getMovieDB(id int, dbinfo DBInfo) (Movie, error) {
 		var lastname string
 		var firstname string
 		if errScan := rows.Scan(&mid, &title, &year, &character, &actorid, &lastname, &firstname); errScan != nil {
-			info.Println("ERROR Scan:", errScan)
 			return m, errScan
 		}
 		m.ID = mid
