@@ -47,28 +47,37 @@ func main() {
 			return nil, err
 		}
 		if datatype == "movie" {
-			var dbErr error
-			var redisError error
-			m, redisError = getMovieRedis(id, dbinfo.RedisEndPoint)
-			if redisError != nil {
-				info.Println("Redis Error:", redisError)
-			}
-			if m.ID != 0 {
-				return m, nil
-			}
-			m, dbErr = getMovieDB(id, dbinfo)
-			if dbErr != nil {
-				info.Println("Error:", dbErr)
-				return nil, dbErr
-			}
-			saveErr := saveMovieToRedis(m, dbinfo.RedisEndPoint)
-			if saveErr != nil {
-				info.Println("Error Redis:", saveErr)
+			m, err = getMovie(id, dbinfo)
+			if err != nil {
+				info.Println("ERROR:", err)
+				return nil, err
 			}
 		}
 		return m, nil
 	})
 }
+
+func getMovie(id int, db DBInfo) (Movie, error) {
+	var m Movie
+	var err error
+	m, err = getMovieRedis(id, db.RedisEndPoint)
+	if err != nil {
+		return Movie{}, err
+	}
+	if m.ID != 0 {
+		return m, nil
+	}
+	m, err = getMovieDB(id, db)
+	if err != nil {
+		return Movie{}, err
+	}
+	err = saveMovieToRedis(m, db.RedisEndPoint)
+	if err != nil {
+		return Movie{}, err
+	}
+	return m, nil
+}
+
 func getDBInfo(r Event) (DBInfo, error) {
 	var db DBInfo
 	db.Location = r.StageVars["dblocation"]
