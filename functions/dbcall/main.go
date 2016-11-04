@@ -19,52 +19,49 @@ var info *log.Logger
 
 const movieformat = "m:%v"
 
-var redisendpiont string
-
 func main() {
 	apex.HandleFunc(func(event json.RawMessage, ctx *apex.Context) (interface{}, error) {
 		var rEvent Event
 		var dbinfo DBInfo
 		var m Movie
 		var id int
-		var idErr error
+		var err error
 		xborbits := log.Ldate | log.Ltime | log.Lshortfile
 		info = log.New(os.Stderr, "dbLog", xborbits)
-		data, err := event.MarshalJSON()
+		rEvent, err = getEvent(event)
 		if err != nil {
 			return nil, err
 		}
-		jdata := strings.Replace(string(data), `\"`, `"`, -1)
-		json.Unmarshal([]byte(jdata), &rEvent)
+
 		datatype := rEvent.Params.Path["type"]
 		if !(datatype == "movie" || datatype == "actor") {
 			return nil, fmt.Errorf("Invalid Type %s", datatype)
 		}
 		rawid := rEvent.Params.Querystring["id"]
-		if id, idErr = strconv.Atoi(rawid); idErr != nil {
-			return nil, idErr
+		if id, err = strconv.Atoi(rawid); err != nil {
+			return nil, err
 		}
-		dbinfo.Location = rEvent.StageVars["dblocation"]
-		dbinfo.DBName = rEvent.StageVars["dbname"]
-		dbinfo.Username = rEvent.StageVars["dbuser"]
-		dbinfo.Password = rEvent.StageVars["dbpassword"]
-		redisendpiont = rEvent.StageVars["redis"]
+		dbinfo, err = getDBInfo(rEvent)
+		if err != nil {
+			info.Println(err)
+			return nil, err
+		}
 		if datatype == "movie" {
 			var dbErr error
 			var redisError error
-			m, redisError = getMovieRedis(id)
+			m, redisError = getMovieRedis(id, dbinfo.RedisEndPoint)
 			if redisError != nil {
 				info.Println("Redis Error:", redisError)
 			}
 			if m.ID != 0 {
 				return m, nil
 			}
-			m, dbErr = getMovieData(id, dbinfo)
+			m, dbErr = getMovieDB(id, dbinfo)
 			if dbErr != nil {
 				info.Println("Error:", dbErr)
 				return nil, dbErr
 			}
-			saveErr := saveMovieToRedis(m, id)
+			saveErr := saveMovieToRedis(m, dbinfo.RedisEndPoint)
 			if saveErr != nil {
 				info.Println("Error Redis:", saveErr)
 			}
@@ -72,12 +69,39 @@ func main() {
 		return m, nil
 	})
 }
-
-func getMovieRedis(id int) (Movie, error) {
-	var m Movie
-	c, err := redis.Dial("tcp", fmt.Sprintf("%s:6379", redisendpiont))
+func getDBInfo(r Event) (DBInfo, error) {
+	var db DBInfo
+	db.Location = r.StageVars["dblocation"]
+	db.DBName = r.StageVars["dbname"]
+	db.Username = r.StageVars["dbuser"]
+	db.Password = r.StageVars["dbpassword"]
+	db.RedisEndPoint = r.StageVars["redis"]
+	if db.Location == "" || db.DBName == "" || db.Username == "" || db.Password == "" || db.RedisEndPoint == "" {
+		return DBInfo{}, fmt.Errorf("Invalid DBInfo %v", db)
+	}
+	return db, nil
+}
+func getEvent(rawmsg json.RawMessage) (Event, error) {
+	var r Event
+	var err error
+	var data []byte
+	data, err = rawmsg.MarshalJSON()
 	if err != nil {
-		info.Println("Redis Dial Error:", err, fmt.Sprintf("%s:6379", redisendpiont))
+		return Event{}, err
+	}
+	jdata := strings.Replace(string(data), `\"`, `"`, -1)
+	err = json.Unmarshal([]byte(jdata), &r)
+	if err != nil {
+		return Event{}, err
+	}
+	return r, nil
+}
+
+func getMovieRedis(id int, redisendpoint string) (Movie, error) {
+	var m Movie
+	c, err := redis.Dial("tcp", fmt.Sprintf("%s:6379", redisendpoint))
+	if err != nil {
+		info.Println("Redis Dial Error:", err, fmt.Sprintf("%s:6379", redisendpoint))
 		return m, err
 	}
 	defer c.Close()
@@ -96,10 +120,10 @@ func getMovieRedis(id int) (Movie, error) {
 	return m, nil
 }
 
-func saveMovieToRedis(m Movie, id int) error {
-	c, err := redis.Dial("tcp", fmt.Sprintf("%s:6379", redisendpiont))
+func saveMovieToRedis(m Movie, redisendpoint string) error {
+	c, err := redis.Dial("tcp", fmt.Sprintf("%s:6379", redisendpoint))
 	if err != nil {
-		info.Println("Redis Dial Error:", err, fmt.Sprintf("%s:6379", redisendpiont))
+		info.Println("Redis Dial Error:", err, fmt.Sprintf("%s:6379", redisendpoint))
 		return err
 	}
 	defer c.Close()
@@ -107,14 +131,14 @@ func saveMovieToRedis(m Movie, id int) error {
 	if jerr != nil {
 		return jerr
 	}
-	_, errConn := c.Do("SETEX", fmt.Sprintf(movieformat, id), 10, string(movieData))
+	_, errConn := c.Do("SETEX", fmt.Sprintf(movieformat, m.ID), 10, string(movieData))
 	if errConn != nil {
 		return errConn
 	}
 	return nil
 }
 
-func getMovieData(id int, dbinfo DBInfo) (Movie, error) {
+func getMovieDB(id int, dbinfo DBInfo) (Movie, error) {
 	constr := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s", dbinfo.Username, dbinfo.Password, dbinfo.Location, dbinfo.DBName)
 	m := Movie{}
 	db, err := sql.Open("mysql",
@@ -156,10 +180,11 @@ func getMovieData(id int, dbinfo DBInfo) (Movie, error) {
 }
 
 type DBInfo struct {
-	Location string
-	DBName   string
-	Username string
-	Password string
+	Location      string
+	DBName        string
+	Username      string
+	Password      string
+	RedisEndPoint string
 }
 
 type Movie struct {
