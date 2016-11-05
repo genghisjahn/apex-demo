@@ -37,3 +37,8 @@ Keep things warm with a schedule trigger
 
 You have to allow incoming traffic from your security groups
 for the ports for mysql and redis
+
+When using redis as your cache store, be sure to read this:
+http://redis.io/topics/lru-cache
+http://docs.aws.amazon.com/AmazonElastiCache/latest/UserGuide/ParameterGroups.Redis.html
+https://coderanch.com/wiki/660295/Caching-Strategies
