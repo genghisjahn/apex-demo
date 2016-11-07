@@ -125,6 +125,10 @@ func getMovieRedis(id int, redisendpoint string) (Movie, error) {
 	if jerr != nil {
 		return m, jerr
 	}
+	_, expErr := c.Do("EXPIRE", fmt.Sprintf(movieformat, id), 10)
+	if expErr != nil {
+		return m, expErr
+	}
 	m.Source = "cache"
 	return m, nil
 }
