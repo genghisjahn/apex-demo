@@ -26,6 +26,7 @@ func main() {
 		var m Movie
 		var id int
 		var err error
+		var refreshDB bool
 		xborbits := log.Ldate | log.Ltime | log.Lshortfile
 		info = log.New(os.Stderr, "dbLog", xborbits)
 		rEvent, err = getEvent(event)
@@ -38,6 +39,12 @@ func main() {
 		if !(datatype == "movie" || datatype == "actor") {
 			return nil, fmt.Errorf("Invalid Type %s", datatype)
 		}
+		refresh, ok := rEvent.Params.Querystring["refresh"]
+		if ok {
+			if refresh == "1" {
+				refreshDB = true
+			}
+		}
 		rawid := rEvent.Params.Querystring["id"]
 		if id, err = strconv.Atoi(rawid); err != nil {
 			return nil, err
@@ -48,7 +55,7 @@ func main() {
 			return nil, err
 		}
 		if datatype == "movie" {
-			m, err = getMovie(id, dbinfo)
+			m, err = getMovie(id, dbinfo, refreshDB)
 			if err != nil {
 				info.Println("ERROR:", err)
 				return nil, err
@@ -58,15 +65,17 @@ func main() {
 	})
 }
 
-func getMovie(id int, db DBInfo) (Movie, error) {
+func getMovie(id int, db DBInfo, refreshDB bool) (Movie, error) {
 	var m Movie
 	var err error
-	m, err = getMovieRedis(id, db.RedisEndPoint)
-	if err != nil {
-		return Movie{}, err
-	}
-	if m.ID != 0 {
-		return m, nil
+	if !refreshDB {
+		m, err = getMovieRedis(id, db.RedisEndPoint)
+		if err != nil {
+			return Movie{}, err
+		}
+		if m.ID != 0 {
+			return m, nil
+		}
 	}
 	m, err = getMovieDB(id, db)
 	if err != nil {
