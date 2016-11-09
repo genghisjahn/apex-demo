@@ -20,9 +20,6 @@ func main() {
 		data, err := event.MarshalJSON()
 		jdata := strings.Replace(string(data), `\"`, `"`, -1)
 		json.Unmarshal([]byte(jdata), &rEvent)
-		//info.Println("PlayerID: ", eType.Params.Querystring["id"])
-		//info.Println("Headers:", eType.Params.Header["header1"], eType.Params.Header["header2"])
-		info.Println("Path:", rEvent.Params.Path["pid2"])
 		var n1 int
 		var n2 int
 
